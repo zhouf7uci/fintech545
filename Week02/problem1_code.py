@@ -1,84 +1,62 @@
-import pandas as pd
 import numpy as np
-from scipy.stats import skew, kurtosis, ttest_1samp
+import math
 
-# Load the data from the CSV file
-file_path = '/Users/heyahe/FINTECH-545/Week02/problem1.csv'
-data = pd.read_csv(file_path)
-sim = data['x'].values.reshape(-1, 1)
+# Define the parameters P(t-1)=100, sigma=0.02 for the simulation
+sigma = 0.02
+P_0 = 100
 
-# Calculate the first four moments values by using normalized formula
-def first4Moments(sample):
-    n = sample.shape[0]
-    mu_hat = np.mean(sample)
-    sim_corrected = sample - mu_hat
-    cm2 = np.dot(sim_corrected.T, sim_corrected) / n
-    sigma2_hat = np.dot(sim_corrected.T, sim_corrected) / (n - 1)
-    skew_hat = np.sum(sim_corrected ** 3) / n / (cm2 ** 1.5)
-    kurt_hat = np.sum(sim_corrected ** 4) / n / (cm2 ** 2)
-    excessKurt_hat = kurt_hat - 3
-    return mu_hat, sigma2_hat[0,0], skew_hat[0,0], excessKurt_hat[0,0]
+# Simulate prices with 10000 times
+sim_returns = np.random.normal(0,sigma,10000)
 
-m, s2, sk, k = first4Moments(sim)
+# Classic Brownian Motion: P_t = P_(t-1) + r_t
+price_brownian = P_0 + sim_returns
 
-# Print the results
-print("First four moments values by using normalized formula")
-print("Mean:", m)
-print("Variance:", s2)
-print("Skewness:", sk)
-print("Kurtosis:", k)
+# Calculate mean and standard deviation of sim_prices
+sim_mean_brownian = price_brownian.mean()
+sim_std_brownian = price_brownian.std()
 
-m_sp = np.mean(sim)
-s2_sp = np.var(sim, ddof=1)
-sk_sp = skew(sim)
-k_sp = kurtosis(sim, fisher=True)
-print("\nFirst four moments values by using statistical package")
-print("Mean:", m_sp)
-print("Variance:", s2_sp)
-print("Skewness:", sk_sp[0])
-print("Kurtosis:", k_sp[0])
+# Theoretical mean and standard deviation of P(t) in Classic Brownian Motion
+theory_mean_brownian = P_0
+theory_std_brownian = sigma
 
-# Function to create synthetic data with known properties
-def create_synthetic_data(n, mean, variance, skewness, kurtosis):
-    data = np.random.normal(loc=mean, scale=np.sqrt(variance), size=n)
-    return data
+# Arithmetic Return System: P_t = P_(t-1) * (1 + r_t)
+price_arithmetic = P_0 * (1 + sim_returns)
 
-# Number of datasets and samples per dataset
-num_datasets = 100
-n_samples = 1000
+# Calculate mean and standard deviation of sim_prices
+sim_mean_arithmetic = price_arithmetic.mean()
+sim_std_arithmetic = price_arithmetic.std()
 
-# Known properties
-known_mean = 0
-known_variance = 1
-known_skewness = 0
-known_kurtosis = 3
+# Theoretical mean and standard deviation of P(t) in Arithmetic Return System
+theory_mean_arithmetic = P_0
+theory_std_arithmetic = P_0 * sigma
 
-# Store the differences between calculated and true values
-differences = {
-    'mean': [],
-    'variance': [],
-    'skewness': [],
-    'kurtosis': []
-}
+# Log Return or Geometric Brownian Motion: P_t = P_(t-1) * e^(r_t)
+price_log = P_0 * np.exp(sim_returns)
 
-# Generate synthetic datasets and calculate moments
-for i in range(num_datasets):
-    data = create_synthetic_data(n_samples, known_mean, known_variance, known_skewness, known_kurtosis).reshape(-1, 1)
-    m, s2, sk, k = first4Moments(data)
-    m_sp = np.mean(data)
-    s2_sp = np.var(data, ddof=1)
-    sk_sp = skew(data)[0]
-    k_sp = kurtosis(data, fisher=True)[0]
+# Calculate mean and standard deviation of sim_prices
+sim_mean_log = price_log.mean()
+sim_std_log = price_log.std()
 
-    # Store the differences
-    differences['mean'].append(m - m_sp)
-    differences['variance'].append(s2 - s2_sp)
-    differences['skewness'].append(sk - sk_sp)
-    differences['kurtosis'].append(k - k_sp)
+# Theoretical mean and standard deviation of P(t) in Log Return
+theory_mean_log = P_0 * math.exp(0.5 * pow(sigma,2))
+theory_std_log = P_0 * math.sqrt(math.exp(pow(sigma,2)) - 1)
 
-# Perform t-tests to check if differences are statistically significant
-t_test_results = {}
-for moment in differences:
-    t_test_results[moment] = ttest_1samp(differences[moment], 0)
-print()
-print(t_test_results)
+# Print the expected value for each model
+print(f"Expected value for Classical Brownian Motion: {theory_mean_brownian:.2f}")
+print(f"Expected value for Arithmetic Return System: {theory_mean_arithmetic:.2f}")
+print(f"Expected value for Log Return or Geometric Brownian Motion: {theory_mean_log:.2f}\n")
+
+# Print the expected standard deviation for each model
+print(f"Expected standard deviation for Classical Brownian Motion: {theory_std_brownian:.2f}")
+print(f"Expected standard deviation for Arithmetic Return System: {theory_std_arithmetic:.2f}")
+print(f"Expected standard deviation for Log Return or Geometric Brownian Motion: {theory_std_log:.2f}\n")
+
+# Print the simulated prices for each model
+print(f"Simulated price using Classical Brownian Motion: {sim_mean_brownian:.2f}")
+print(f"Simulated price using Arithmetic Return System: {sim_mean_arithmetic:.2f}")
+print(f"Simulated price using Log Return or Geometric Brownian Motion: {sim_mean_log:.2f}\n")
+
+# Print the simulated standard deviation for each model
+print(f"Simulated standard deviation using Classical Brownian Motion: {sim_std_brownian:.2f}")
+print(f"Simulated standard deviation using Arithmetic Return System: {sim_std_arithmetic:.2f}")
+print(f"Simulated standard deviation using Log Return or Geometric Brownian Motion: {sim_std_log:.2f}\n")
